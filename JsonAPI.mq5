@@ -31,11 +31,11 @@
 #include <Zmq/Zmq.mqh>
 #include <Json.mqh>
 
-string HOST="*";
-int SYS_PORT=2201;
-int DATA_PORT=2202;
-int LIVE_PORT=2203;
-int STR_PORT=2204;
+input string HOST="*";
+input int SYS_PORT=2201;
+input int DATA_PORT=2202;
+input int LIVE_PORT=2203;
+input int STR_PORT=2204;
 
 // ZeroMQ Cnnections
 Context context("MQL5 JSON API");
