@@ -950,8 +950,9 @@ void TradingModule(CJAVal &dataObject){
   ENUM_ORDER_TYPE_TIME exp_type = ORDER_TIME_GTC;
   datetime expiration = 0;
   if (dataObject["expiration"].ToInt() != 0) {
+  
     exp_type = ORDER_TIME_SPECIFIED;
-    expiration=dataObject["expiration"].ToInt();
+    expiration=(datetime)dataObject["expiration"].ToInt();
   }
   
   // Market orders
@@ -982,7 +983,7 @@ void TradingModule(CJAVal &dataObject){
             return;
          }
     }else{
-         if(trade.BuyLimit(volume,price,symbol,SL,TP,ORDER_TIME_GTC,expiration,comment)){
+         if(trade.BuyLimit(volume,price,symbol,SL,TP,ORDER_TIME_SPECIFIED,expiration,comment)){
            OrderDoneOrError(false, __FUNCTION__, trade);
            return;
          }
