@@ -37,6 +37,16 @@ input int DATA_PORT=2202;
 input int LIVE_PORT=2203;
 input int STR_PORT=2204;
 
+#include <RestApi.mqh>
+
+input int      port = 6542;
+input string   callbackUrl = "http://localhost/callback";
+input string   callbackFormat = "json";
+input string   url_swagger = "localhost:6542";
+input int      CommandPingMilliseconds = 10;
+input string   AuthToken = "{test-token}";
+CRestApi api;
+
 // ZeroMQ Cnnections
 Context context("MQL5 JSON API");
 Socket sysSocket(context,ZMQ_REP);
@@ -101,6 +111,9 @@ int OnInit(){
             bool getBook=MarketBookGet(SymbolName(k,true),priceArray);
         }
          
+   api.Init("http://localhost", port, 1, url_swagger);
+   api.SetCallback( callbackUrl, callbackFormat );
+   api.SetAuth( AuthToken );
   // Skip reloading of the EA script when the reason to reload is a chart timeframe change
   if (deInitReason != REASON_CHARTCHANGE){
   
@@ -271,6 +284,8 @@ void OnTimer(){
   
   // Get request from client via System socket.
   sysSocket.recv(request,true);
+  
+  api.Processing();
   
   // Request recived
   if(request.size()>0){ 
@@ -1076,6 +1091,9 @@ void TradingModule(CJAVal &dataObject){
 void OnTradeTransaction(const MqlTradeTransaction &trans,
                         const MqlTradeRequest &request,
                         const MqlTradeResult &result){
+                        
+                        
+  api.OnTradeTransaction( trans, request, result );
    
   ENUM_TRADE_TRANSACTION_TYPE  trans_type=trans.type;
   switch(trans.type) {
