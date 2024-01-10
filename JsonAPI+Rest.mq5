@@ -35,7 +35,6 @@ input string HOST="*";
 input int SYS_PORT=2201;
 input int DATA_PORT=2202;
 input int LIVE_PORT=2203;
-input int STR_PORT=2204;
 
 #include <RestApi.mqh>
 
@@ -49,10 +48,10 @@ CRestApi api;
 
 // ZeroMQ Cnnections
 Context context("MQL5 JSON API");
-Socket sysSocket(context,ZMQ_REP);
-Socket dataSocket(context,ZMQ_PUSH);
-Socket liveSocket(context,ZMQ_PUSH);
-Socket streamSocket(context,ZMQ_PUSH);
+Context context("MQL5 JSON API");
+Socket *sysSocket = new Socket(context,ZMQ_REP);
+Socket *dataSocket = new Socket(context,ZMQ_PUSH);
+Socket *liveSocket = new Socket(context,ZMQ_PUSH);
 
 // Global variables
 bool debug = false;
@@ -74,24 +73,19 @@ bool BindSockets(){
   if (result == false) return result;
   result = liveSocket.bind(StringFormat("tcp://%s:%d", HOST,LIVE_PORT));
   if (result == false) return result;
-  result = streamSocket.bind(StringFormat("tcp://%s:%d", HOST,STR_PORT));
-  if (result == false) return result;
   
   Print("Bound 'System' socket on port ", SYS_PORT);
   Print("Bound 'Data' socket on port ", DATA_PORT);
   Print("Bound 'Live' socket on port ", LIVE_PORT);
-  Print("Bound 'Streaming' socket on port ", STR_PORT);
     
   sysSocket.setLinger(1000);
   dataSocket.setLinger(1000);
   liveSocket.setLinger(1000);
-  streamSocket.setLinger(1000);
     
   // Number of messages to buffer in RAM.
   sysSocket.setSendHighWaterMark(1);
   dataSocket.setSendHighWaterMark(5);
   liveSocket.setSendHighWaterMark(1);
-  streamSocket.setSendHighWaterMark(50);
 
   return result;
 }
@@ -161,9 +155,10 @@ void OnDeinit(const int reason){
       dataSocket.unbind(StringFormat("tcp://%s:%d", HOST,DATA_PORT));
       Print("Unbinding 'Live' socket on port ", LIVE_PORT, "..");
       liveSocket.unbind(StringFormat("tcp://%s:%d", HOST,LIVE_PORT));
-      Print("Unbinding 'Streaming' socket on port ", STR_PORT, "..");
-      streamSocket.unbind(StringFormat("tcp://%s:%d", HOST,STR_PORT));
-      
+      delete sysSocket;
+      delete dataSocket;
+      delete liveSocket;
+   
       // Shutdown ZeroMQ Context
       context.shutdown();
       context.destroy(0);
@@ -1094,51 +1089,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
                         
                         
   api.OnTradeTransaction( trans, request, result );
-   
-  ENUM_TRADE_TRANSACTION_TYPE  trans_type=trans.type;
-  switch(trans.type) {
-    // case  TRADE_TRANSACTION_POSITION: {}  break;
-    // case  TRADE_TRANSACTION_DEAL_ADD: {}  break;
-    case  TRADE_TRANSACTION_REQUEST:{
-      CJAVal data, req, res;
-      
-      req["action"]=EnumToString(request.action);
-      req["order"]=(int) request.order;
-      req["symbol"]=(string) request.symbol;
-      req["volume"]=(double) request.volume;
-      req["price"]=(double) request.price;
-      req["stoplimit"]=(double) request.stoplimit;
-      req["sl"]=(double) request.sl;
-      req["tp"]=(double) request.tp;
-      req["deviation"]=(int) request.deviation;
-      req["type"]=EnumToString(request.type);
-      req["type_filling"]=EnumToString(request.type_filling);
-      req["type_time"]=EnumToString(request.type_time);
-      req["expiration"]=(int) request.expiration;
-      req["comment"]=(string) request.comment;
-      req["position"]=(int) request.position;
-      req["position_by"]=(int) request.position_by;
-      
-      res["retcode"]=(int) result.retcode;
-      res["result"]=(string) GetRetcodeID(result.retcode);
-      res["deal"]=(int) result.order;
-      res["order"]=(int) result.order;
-      res["volume"]=(double) result.volume;
-      res["price"]=(double) result.price;
-      res["comment"]=(string) result.comment;
-      res["request_id"]=(int) result.request_id;
-      res["retcode_external"]=(int) result.retcode_external;
-
-      data["request"].Set(req);
-      data["result"].Set(res);
-      
-      string t=data.Serialize();
-      if(debug) Print(t);
-      InformClientSocket(streamSocket,t);
-    }
-    break;
-    default: {} break;
-  }
+  
 }
 
 //+------------------------------------------------------------------+
